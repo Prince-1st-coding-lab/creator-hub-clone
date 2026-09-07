@@ -565,6 +565,8 @@ function ProductsPanel() {
   const qc = useQueryClient();
   const { data } = useQuery(allProductsQuery);
   const [items, setItems] = useState<Product[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [openIds, setOpenIds] = useState<string[]>([]);
   useEffect(() => {
     if (data) setItems(data);
   }, [data]);
@@ -572,7 +574,10 @@ function ProductsPanel() {
   const update = (id: string, patch: Partial<Product>) =>
     setItems((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
 
-  const refresh = () => qc.invalidateQueries({ queryKey: ["products"] });
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: ["products"] });
+    qc.invalidateQueries({ queryKey: ["products", "all"] });
+  };
 
   const save = async (p: Product) => {
     const { error } = await supabase
@@ -596,153 +601,285 @@ function ProductsPanel() {
       .eq("id", p.id);
     if (error) { toast.error(error.message); return; }
     refresh();
-    toast.success("Product saved");
+    toast.success("Saved");
   };
 
-  const add = async () => {
-    const { error } = await supabase
+  const create = async (parentId: string | null, name: string) => {
+    const siblings = items.filter((p) => (p.parent_id ?? null) === parentId);
+    const { data: created, error } = await supabase
       .from("products")
       .insert({
-        name: "New product",
-        slug: `new-product-${Math.random().toString(36).slice(2, 8)}`,
-        position: items.length + 1,
+        name,
+        slug: `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Math.random().toString(36).slice(2, 6)}`,
+        parent_id: parentId,
+        position: siblings.length + 1,
         visible: false,
-      });
+      })
+      .select()
+      .maybeSingle();
     if (error) { toast.error(error.message); return; }
     refresh();
-    qc.invalidateQueries({ queryKey: ["products", "all"] });
-    toast.success("Product added");
+    if (parentId) setOpenIds((prev) => (prev.includes(parentId) ? prev : [...prev, parentId]));
+    if (created) setEditingId((created as Product).id);
+    toast.success(parentId ? "Item added — fill in the details" : "Category added");
   };
 
   const remove = async (id: string) => {
     const { error } = await supabase.from("products").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
     setItems((prev) => prev.filter((p) => p.id !== id));
+    if (editingId === id) setEditingId(null);
     refresh();
-    toast.success("Product removed");
+    toast.success("Removed");
   };
+
+  const categories = items.filter((p) => !p.parent_id);
+  const childrenOf = (id: string) => items.filter((p) => p.parent_id === id);
+
+  const form = (p: Product) => (
+    <ProductForm
+      product={p}
+      categories={categories}
+      onChange={(patch) => update(p.id, patch)}
+      onSave={() => save(p)}
+      onDelete={() => remove(p.id)}
+      onClose={() => setEditingId(null)}
+    />
+  );
 
   return (
     <div className="space-y-6">
-      <button type="button" className={btn} onClick={add}>
-        Add product
-      </button>
-      {items.map((p) => (
-        <div key={p.id} className={`${card} space-y-4`}>
-          <Field label="Name" value={p.name} onChange={(v) => update(p.id, { name: v })} />
-          <Field
-            label="Page address (slug)"
-            value={p.slug}
-            onChange={(v) => update(p.id, { slug: v })}
-          />
-          <Field
-            label="Description"
-            textarea
-            value={p.description}
-            onChange={(v) => update(p.id, { description: v })}
-          />
-          <Field
-            label="Price (leave empty to hide)"
-            value={p.price}
-            onChange={(v) => update(p.id, { price: v })}
-          />
-          <ImageField
-            label="Main product image"
-            value={p.image_url}
-            onChange={(v) => update(p.id, { image_url: v })}
-          />
-          <GalleryField
-            label="Product gallery images"
-            value={p.gallery ?? []}
-            onChange={(v) => update(p.id, { gallery: v })}
-          />
+      <div className={card}>
+        <h1 className="font-display text-xl">Shop items</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Open a category, then use “Add item” to put a new product inside it.
+        </p>
+        <button type="button" className={`${btn} mt-4`} onClick={() => create(null, "New category")}>
+          New category
+        </button>
+      </div>
 
-          <Field
-            label="Product page text (extra details)"
-            textarea
-            value={p.details}
-            onChange={(v) => update(p.id, { details: v })}
-          />
+      {categories.map((c) => {
+        const kids = childrenOf(c.id);
+        const open = openIds.includes(c.id);
+        return (
+          <div key={c.id} className={`${card} space-y-4`}>
+            <div className="flex items-start gap-4">
+              {c.image_url ? (
+                <img
+                  src={c.image_url}
+                  alt=""
+                  className="h-16 w-16 shrink-0 rounded-xl object-cover ring-1 ring-border"
+                />
+              ) : (
+                <div className="h-16 w-16 shrink-0 rounded-xl bg-muted ring-1 ring-border" />
+              )}
+              <div className="min-w-0">
+                <p className="font-display text-lg">{c.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  {kids.length ? `${kids.length} item${kids.length > 1 ? "s" : ""}` : "No items yet"}
+                </p>
+              </div>
+            </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Field
-              label="Size (e.g. 30cm tall)"
-              value={p.size ?? ""}
-              onChange={(v) => update(p.id, { size: v })}
-            />
-            <Field
-              label="Type / material (e.g. Ceramic)"
-              value={p.material ?? ""}
-              onChange={(v) => update(p.id, { material: v })}
-            />
-            <Field
-              label="Best for (e.g. Indoor)"
-              value={p.placement ?? ""}
-              onChange={(v) => update(p.id, { placement: v })}
-            />
-          </div>
+            <div className="flex flex-wrap gap-3">
+              <button type="button" className={btn} onClick={() => create(c.id, "New item")}>
+                Add item to {c.name}
+              </button>
+              <button
+                type="button"
+                className="rounded-full border border-border bg-background px-5 py-2.5 text-sm"
+                onClick={() => setEditingId(editingId === c.id ? null : c.id)}
+              >
+                {editingId === c.id ? "Close category" : "Edit category"}
+              </button>
+              {kids.length ? (
+                <button
+                  type="button"
+                  className="rounded-full border border-border bg-background px-5 py-2.5 text-sm"
+                  onClick={() =>
+                    setOpenIds((prev) =>
+                      prev.includes(c.id) ? prev.filter((x) => x !== c.id) : [...prev, c.id],
+                    )
+                  }
+                >
+                  {open ? "Hide items" : "Show items"}
+                </button>
+              ) : null}
+            </div>
 
-          <label className="block text-sm">
-            <span className="font-medium">Belongs to category</span>
-            <select
-              className={input}
-              value={p.parent_id ?? ""}
-              onChange={(e) => update(p.id, { parent_id: e.target.value || null })}
-            >
-              <option value="">Top-level category (shows in shop)</option>
-              {items
-                .filter((c) => c.id !== p.id && !c.parent_id)
-                .map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
+            {editingId === c.id ? form(c) : null}
+
+            {open && kids.length ? (
+              <div className="space-y-3 border-t border-border pt-4">
+                {kids.map((k) => (
+                  <div key={k.id} className="rounded-xl border border-border bg-background p-4">
+                    <div className="flex flex-wrap items-center gap-3">
+                      {k.image_url ? (
+                        <img
+                          src={k.image_url}
+                          alt=""
+                          className="h-10 w-10 rounded-lg object-cover ring-1 ring-border"
+                        />
+                      ) : (
+                        <div className="h-10 w-10 rounded-lg bg-muted ring-1 ring-border" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium">{k.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {k.price || "No price"} · {k.visible ? "Visible" : "Hidden"}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className="rounded-full border border-border px-4 py-2 text-xs"
+                        onClick={() => setEditingId(editingId === k.id ? null : k.id)}
+                      >
+                        {editingId === k.id ? "Close" : "Edit item"}
+                      </button>
+                    </div>
+                    {editingId === k.id ? form(k) : null}
+                  </div>
                 ))}
-            </select>
-          </label>
-          <div className="flex flex-wrap items-center gap-6">
-            <label className="text-sm">
-              <span className="font-medium">Position</span>
-              <input
-                type="number"
-                className={input}
-                value={p.position}
-                onChange={(e) => update(p.id, { position: Number(e.target.value) })}
-              />
-            </label>
-            <label className="flex items-center gap-2 pt-5 text-sm">
-              <input
-                type="checkbox"
-                checked={p.available}
-                onChange={(e) => update(p.id, { available: e.target.checked })}
-              />
-              Available
-            </label>
-            <label className="flex items-center gap-2 pt-5 text-sm">
-              <input
-                type="checkbox"
-                checked={p.visible}
-                onChange={(e) => update(p.id, { visible: e.target.checked })}
-              />
-              Visible in shop
-            </label>
+              </div>
+            ) : null}
           </div>
-          <div className="flex gap-3">
-            <button type="button" className={btn} onClick={() => save(p)}>
-              Save product
-            </button>
-            <button
-              type="button"
-              className="rounded-full border border-destructive px-5 py-2.5 text-sm text-destructive"
-              onClick={() => remove(p.id)}
-            >
-              Delete
-            </button>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
+
+function ProductForm({
+  product: p,
+  categories,
+  onChange,
+  onSave,
+  onDelete,
+  onClose,
+}: {
+  product: Product;
+  categories: Product[];
+  onChange: (patch: Partial<Product>) => void;
+  onSave: () => void;
+  onDelete: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="space-y-4 border-t border-border pt-4">
+      <Field label="Name" value={p.name} onChange={(v) => onChange({ name: v })} />
+      <Field label="Page address (slug)" value={p.slug} onChange={(v) => onChange({ slug: v })} />
+      <Field
+        label="Description"
+        textarea
+        value={p.description}
+        onChange={(v) => onChange({ description: v })}
+      />
+      <Field
+        label="Price (leave empty to hide)"
+        value={p.price}
+        onChange={(v) => onChange({ price: v })}
+      />
+      <ImageField
+        label="Main image"
+        value={p.image_url}
+        onChange={(v) => onChange({ image_url: v })}
+      />
+      <GalleryField
+        label="Gallery images"
+        value={p.gallery ?? []}
+        onChange={(v) => onChange({ gallery: v })}
+      />
+      <Field
+        label="Page text (extra details)"
+        textarea
+        value={p.details}
+        onChange={(v) => onChange({ details: v })}
+      />
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Field
+          label="Size (e.g. 30cm tall)"
+          value={p.size ?? ""}
+          onChange={(v) => onChange({ size: v })}
+        />
+        <Field
+          label="Type / material (e.g. Ceramic)"
+          value={p.material ?? ""}
+          onChange={(v) => onChange({ material: v })}
+        />
+        <Field
+          label="Best for (e.g. Indoor)"
+          value={p.placement ?? ""}
+          onChange={(v) => onChange({ placement: v })}
+        />
+      </div>
+      <label className="block text-sm">
+        <span className="font-medium">Belongs to category</span>
+        <select
+          className={input}
+          value={p.parent_id ?? ""}
+          onChange={(e) => onChange({ parent_id: e.target.value || null })}
+        >
+          <option value="">Top-level category (shows in shop)</option>
+          {categories
+            .filter((c) => c.id !== p.id)
+            .map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+        </select>
+      </label>
+      <div className="flex flex-wrap items-center gap-6">
+        <label className="text-sm">
+          <span className="font-medium">Position</span>
+          <input
+            type="number"
+            className={input}
+            value={p.position}
+            onChange={(e) => onChange({ position: Number(e.target.value) })}
+          />
+        </label>
+        <label className="flex items-center gap-2 pt-5 text-sm">
+          <input
+            type="checkbox"
+            checked={p.available}
+            onChange={(e) => onChange({ available: e.target.checked })}
+          />
+          Available
+        </label>
+        <label className="flex items-center gap-2 pt-5 text-sm">
+          <input
+            type="checkbox"
+            checked={p.visible}
+            onChange={(e) => onChange({ visible: e.target.checked })}
+          />
+          Visible in shop
+        </label>
+      </div>
+      <div className="flex flex-wrap gap-3">
+        <button type="button" className={btn} onClick={onSave}>
+          Save
+        </button>
+        <button
+          type="button"
+          className="rounded-full border border-border px-5 py-2.5 text-sm"
+          onClick={onClose}
+        >
+          Close
+        </button>
+        <button
+          type="button"
+          className="rounded-full border border-destructive px-5 py-2.5 text-sm text-destructive"
+          onClick={onDelete}
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  );
+}
+
 
 function TipsPanel() {
   const qc = useQueryClient();

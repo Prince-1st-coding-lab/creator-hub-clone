@@ -22,6 +22,13 @@
       "when": 1788776690184,
       "tag": "0002_site_images_storage_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788776716709,
+      "tag": "0003_products_variant_columns",
+      "breakpoints": true
     }
   ]
 }

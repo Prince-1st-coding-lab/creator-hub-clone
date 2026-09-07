@@ -1,11 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { MessageCircle } from "lucide-react";
 
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { ContactMenu } from "@/components/site/ContactMenu";
+import { ProductQuickView, type QuickViewItem } from "@/components/site/ProductQuickView";
 import { productsQuery, servicesQuery, settingsQuery, whatsappLink } from "@/lib/site-data";
+
 
 export const Route = createFileRoute("/shop/")({
   loader: async ({ context }) => {

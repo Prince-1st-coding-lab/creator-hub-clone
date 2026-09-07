@@ -1,1 +1,0 @@
-update public.site_settings set hero_title = 'Welcome to G Modern Creativity Ltd — Space Decoration in Rwanda';

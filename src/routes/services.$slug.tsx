@@ -151,11 +151,6 @@ function ServicePage() {
               </button>
             </ContactMenu>
           </div>
-          <div className="rounded-2xl border border-border bg-muted/40 p-6">
-            <h2 className="text-xl">Good to know</h2>
-            <p className="mt-3 text-sm text-muted-foreground">{settings.delivery_text}</p>
-            <p className="mt-3 text-sm text-muted-foreground">{settings.location_text}</p>
-          </div>
         </div>
 
         <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

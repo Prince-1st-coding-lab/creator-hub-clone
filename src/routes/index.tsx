@@ -72,11 +72,11 @@ function Index() {
             <p className="mt-5 max-w-xl text-base text-secondary/85 sm:text-lg">
               {settings.hero_description}
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-8 flex flex-col gap-3">
               <ContactMenu settings={settings}>
                 <button
                   type="button"
-                  className="inline-flex items-center gap-2 rounded-full border border-secondary/40 px-6 py-3 text-sm font-medium text-secondary transition-colors hover:bg-secondary/10"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-secondary/40 px-6 py-3 text-sm font-medium text-secondary transition-colors hover:bg-secondary/10"
                 >
                   <MessageCircle className="h-4 w-4" />
                   Contact Us
@@ -85,13 +85,13 @@ function Index() {
               <Link
                 to="/"
                 hash="services"
-                className="inline-flex items-center rounded-full border border-secondary/40 px-6 py-3 text-sm font-medium text-secondary transition-colors hover:bg-secondary/10"
+                className="inline-flex w-full items-center justify-center rounded-full border border-secondary/40 px-6 py-3 text-sm font-medium text-secondary transition-colors hover:bg-secondary/10"
               >
                 Our Services
               </Link>
               <Link
                 to="/shop"
-                className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-soil transition-transform hover:-translate-y-0.5"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-soil transition-transform hover:-translate-y-0.5"
               >
                 <ArrowRight className="h-4 w-4" />
                 Shop

@@ -178,26 +178,28 @@ function ProductPage() {
         </p>
 
         {shown.length ? (
-          <div className="mt-6 columns-2 gap-4 md:columns-3 lg:columns-4 [&>*]:mb-4">
+          <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
             {shown.map((item, i) => (
               <button
                 key={`${item.name}-${i}`}
                 type="button"
                 onClick={() => setOpenItem(item)}
                 aria-label={`Open details for ${item.name}`}
-                className="group relative block w-full break-inside-avoid overflow-hidden rounded-2xl border border-border text-left shadow-[var(--shadow-soft)]"
+                className="group relative block aspect-[3/4] w-full overflow-hidden rounded-2xl border border-border text-left shadow-[var(--shadow-soft)]"
               >
                 <img
                   src={item.images[0]}
                   alt={`${item.name} — ${product.name} from G Modern Creativity Ltd`}
                   loading="lazy"
-                  className="h-64 w-full object-cover transition-transform duration-300 group-hover:scale-105 sm:h-72"
+                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                 />
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-soil/90 via-soil/40 to-transparent p-4 pt-10 transition-transform duration-300 group-hover:-translate-y-1">
-                  <p className="truncate text-sm font-medium text-secondary">{item.name}</p>
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-soil/90 via-soil/50 to-transparent p-4 pt-12">
+                  <p className="text-base font-medium text-secondary">{item.name}</p>
                   {item.price ? (
                     <p className="mt-0.5 font-display text-sm text-secondary/85">{item.price}</p>
-                  ) : null}
+                  ) : (
+                    <p className="mt-0.5 font-display text-sm text-secondary/85">Ask for price</p>
+                  )}
                 </div>
               </button>
             ))}

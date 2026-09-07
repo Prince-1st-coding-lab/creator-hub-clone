@@ -183,7 +183,14 @@ function ShopPage() {
             </button>
           </ContactMenu>
         </div>
+
+        <ProductQuickView
+          item={openItem}
+          whatsapp={settings.whatsapp}
+          onClose={() => setOpenItem(null)}
+        />
       </section>
+
 
       <SiteFooter settings={settings} services={services} />
     </div>

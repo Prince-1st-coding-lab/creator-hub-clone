@@ -1,11 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { MessageCircle } from "lucide-react";
 
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { ContactMenu } from "@/components/site/ContactMenu";
+import { ProductQuickView, type QuickViewItem } from "@/components/site/ProductQuickView";
 import { productsQuery, servicesQuery, settingsQuery, whatsappLink } from "@/lib/site-data";
+
 
 export const Route = createFileRoute("/shop/")({
   loader: async ({ context }) => {
@@ -76,6 +79,7 @@ function ShopPage() {
   const { data: settings } = useSuspenseQuery(settingsQuery);
   const { data: products } = useSuspenseQuery(productsQuery);
   const { data: services } = useSuspenseQuery(servicesQuery);
+  const [openItem, setOpenItem] = useState<QuickViewItem | null>(null);
 
   return (
     <div className="min-h-screen bg-background">
@@ -95,7 +99,24 @@ function ShopPage() {
               key={p.id}
               className="overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-soft)]"
             >
-              <Link to="/shop/$slug" params={{ slug: p.slug }} className="block">
+              <button
+                type="button"
+                aria-label={`Open details for ${p.name}`}
+                onClick={() =>
+                  setOpenItem({
+                    name: p.name,
+                    price: p.price,
+                    description: p.description,
+                    size: p.size,
+                    material: p.material,
+                    placement: p.placement,
+                    available: p.available,
+                    slug: p.slug,
+                    images: [p.image_url, ...(p.gallery ?? [])].filter(Boolean),
+                  })
+                }
+                className="block w-full"
+              >
                 <img
                   src={p.image_url}
                   alt={p.name}
@@ -104,10 +125,11 @@ function ShopPage() {
                   height={912}
                   className="h-56 w-full object-cover transition-transform duration-300 hover:scale-105"
                 />
-              </Link>
+              </button>
               <div className="p-6">
                 <div className="flex items-start justify-between gap-3">
                   <h2 className="text-xl">
+
                     <Link to="/shop/$slug" params={{ slug: p.slug }} className="hover:underline">
                       {p.name}
                     </Link>
@@ -161,7 +183,14 @@ function ShopPage() {
             </button>
           </ContactMenu>
         </div>
+
+        <ProductQuickView
+          item={openItem}
+          whatsapp={settings.whatsapp}
+          onClose={() => setOpenItem(null)}
+        />
       </section>
+
 
       <SiteFooter settings={settings} services={services} />
     </div>
